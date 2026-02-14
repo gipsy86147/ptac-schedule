@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="description" content="Princeton Tiger Aquatics Club swim schedule for all groups">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PTAC Schedule</title>
+<style>
+:root {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #555;
+  --color-border: #e0e0e0;
+  --color-primary: #1a1a2e;
+  --color-primary-light: #e8e8f0;
+  --color-accent: #0066cc;
+  --color-meet: #d4380d;
+  --color-meet-bg: #fff2e8;
+  --color-no-practice: #8c8c8c;
+  --loc-denunzio: #1a1a1a;
+  --loc-wac: #7b2d8b;
+  --loc-mccc: #d46b08;
+  --loc-pms: #0050b3;
+  --loc-benfranklin: #cf1322;
+  --loc-waterworks: #08979c;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.header {
+  background: var(--color-primary);
+  color: #fff;
+  padding: 16px 16px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.refresh-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.refresh-btn:active { background: rgba(255,255,255,0.3); }
+
+.refresh-btn svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.5s;
+}
+
+.refresh-btn.spinning svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.group-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+
+.group-pills::-webkit-scrollbar { display: none; }
+
+.pill {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.pill.active {
+  background: #fff;
+  color: var(--color-primary);
+  border-color: #fff;
+}
+
+.pill:not(.active):active {
+  background: rgba(255,255,255,0.15);
+}
+
+.main {
+  padding: 12px 12px 80px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loading-text {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.loading-slow {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--color-no-practice);
+  display: none;
+}
+
+/* Error */
+.error-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.error-card h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: var(--color-meet);
+}
+
+.error-card p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.error-card a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.error-card .retry-btn {
+  display: inline-block;
+  padding: 10px 24px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* Cache banner */
+.cache-banner {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #614700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cache-banner .retry-link {
+  color: var(--color-accent);
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration: underline;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Day cards */
+.day-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.day-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-date {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.day-relative {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.day-card.has-meet .day-header {
+  background: var(--color-meet-bg);
+}
+
+/* Meet banner inside day card */
+.meet-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--color-meet-bg);
+  border-bottom: 1px solid #ffd8bf;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-meet);
+}
+
+.meet-badge {
+  display: inline-block;
+  background: var(--color-meet);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* Location sections within a day */
+.location-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  border-left: 4px solid var(--loc-denunzio);
+}
+
+.location-section:last-child { border-bottom: none; }
+
+.location-section[data-loc="denunzio"] { border-left-color: var(--loc-denunzio); }
+.location-section[data-loc="wac"] { border-left-color: var(--loc-wac); }
+.location-section[data-loc="mccc"] { border-left-color: var(--loc-mccc); }
+.location-section[data-loc="pms"] { border-left-color: var(--loc-pms); }
+.location-section[data-loc="benfranklin"] { border-left-color: var(--loc-benfranklin); }
+.location-section[data-loc="waterworks"] { border-left-color: var(--loc-waterworks); }
+
+.location-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.location-name span {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.location-name[data-loc="denunzio"] span { color: var(--loc-denunzio); }
+.location-name[data-loc="wac"] span { color: var(--loc-wac); }
+.location-name[data-loc="mccc"] span { color: var(--loc-mccc); }
+.location-name[data-loc="pms"] span { color: var(--loc-pms); }
+.location-name[data-loc="benfranklin"] span { color: var(--loc-benfranklin); }
+.location-name[data-loc="waterworks"] span { color: var(--loc-waterworks); }
+
+.map-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  min-height: 28px;
+}
+
+.map-link svg { width: 14px; height: 14px; }
+
+.event-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.event-group {
+  font-weight: 600;
+  min-width: 36px;
+}
+
+.event-time {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  text-align: right;
+}
+
+.event-note {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  padding: 2px 0;
+}
+
+/* No practice card */
+.no-practice {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--color-no-practice);
+  font-size: 14px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-text-secondary);
+}
+
+.empty-state h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.empty-state p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  color: var(--color-no-practice);
+}
+
+.footer a { color: var(--color-accent); text-decoration: none; }
+
+/* Utilities */
+@media (min-width: 600px) {
+  .main { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>PTAC Schedule</h1>
+    <button class="refresh-btn" id="refreshBtn" aria-label="Refresh schedule">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"></polyline>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+      </svg>
+    </button>
+  </div>
+  <nav class="group-pills" id="groupPills" aria-label="Group filter"></nav>
+</div>
+
+<main class="main" id="content"></main>
+
+<footer class="footer">
+  Data from <a href="https://www.gomotionapp.com/team/njptac/page/calendar1/all-groups" target="_blank" rel="noopener">GoMotion</a>
+</footer>
+
+<script>
+(function() {
+  'use strict';
+
+  // --- Configuration ---
+  const GROUPS = ['AG1', 'AG2', 'AG3', 'JR', 'SR', 'VAR'];
+  const DEFAULT_GROUP = 'AG3';
+  const DAYS_TO_SHOW = 7;
+  const TARGET_URL = 'https://www.gomotionapp.com/team/njptac/page/calendar1/all-groups';
+  const STORAGE_KEY_GROUP = 'ptac-selected-group';
+  const STORAGE_KEY_CACHE = 'ptac-schedule-cache';
+  const FETCH_TIMEOUT = 15000;
+
+  const KNOWN_LOCATIONS = {
+    'denunzio':    { display: 'Denunzio', address: 'DeNunzio Pool, Princeton University, Princeton, NJ' },
+    'wac':         { display: 'WAC', address: 'Windsor Athletic Club, East Windsor, NJ' },
+    'mccc':        { display: 'MCCC', address: 'Mercer County Community College, West Windsor, NJ' },
+    'pms':         { display: 'PMS', address: 'Princeton Unified Middle School, Princeton, NJ' },
+    'ben franklin':{ display: 'Ben Franklin', address: 'Ben Franklin Elementary School, Lawrenceville, NJ' },
+    'west windsor waterworks': { display: 'West Windsor Waterworks', address: 'West Windsor Community Park, West Windsor, NJ' }
+  };
+
+  const MEET_KEYWORDS = ['@', 'sectionals', 'champs', 'championship', 'gold', 'silver', 'bronze', 'invitational', 'zones', 'kickoff'];
+
+  // --- State ---
+  let selectedGroup = DEFAULT_GROUP;
+  let allDays = [];
+  let usingCache = false;
+
+  // --- LocalStorage helpers ---
+  function storageGet(key) {
+    try { return localStorage.getItem(key); } catch(e) { return null; }
+  }
+
+  function storageSet(key, val) {
+    try { localStorage.setItem(key, val); } catch(e) { /* quota or disabled */ }
+  }
+
+  // --- Group selection ---
+  function loadGroup() {
+    const saved = storageGet(STORAGE_KEY_GROUP);
+    if (saved && GROUPS.includes(saved)) {
+      selectedGroup = saved;
+    }
+  }
+
+  function saveGroup(group) {
+    selectedGroup = group;
+    storageSet(STORAGE_KEY_GROUP, group);
+  }
+
+  function renderPills() {
+    const container = document.getElementById('groupPills');
+    container.innerHTML = GROUPS.map(g =>
+      '<button class="pill' + (g === selectedGroup ? ' active' : '') + '" data-group="' + g + '">' + g + '</button>'
+    ).join('');
+    container.addEventListener('click', function(e) {
+      var btn = e.target.closest('.pill');
+      if (!btn) return;
+      var group = btn.dataset.group;
+      saveGroup(group);
+      container.querySelectorAll('.pill').forEach(function(p) {
+        p.classList.toggle('active', p.dataset.group === group);
+      });
+      renderSchedule();
+    });
+  }
+
+  // --- Fetch with CORS proxy ---
+  async function fetchWithTimeout(url, ms) {
+    var controller = new AbortController();
+    var timer = setTimeout(function() { controller.abort(); }, ms);
+    try {
+      var res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.text();
+    } catch(e) {
+      clearTimeout(timer);
+      throw e;
+    }
+  }
+
+  async function fetchScheduleHTML() {
+    var errors = [];
+
+    // Proxy 1: corsproxy.io
+    try {
+      var html = await fetchWithTimeout('https://corsproxy.io/?' + encodeURIComponent(TARGET_URL), FETCH_TIMEOUT);
+      if (html && html.length > 500) return html;
+    } catch(e) { errors.push('corsproxy: ' + e.message); }
+
+    // Proxy 2: allorigins
+    try {
+      var text = await fetchWithTimeout('https://api.allorigins.win/get?url=' + encodeURIComponent(TARGET_URL), FETCH_TIMEOUT);
+      var json = JSON.parse(text);
+      if (json.contents && json.contents.length > 500) return json.contents;
+    } catch(e) { errors.push('allorigins: ' + e.message); }
+
+    throw new Error('All proxies failed: ' + errors.join('; '));
+  }
+
+  // --- Parser ---
+  function identifyLocation(text) {
+    var t = text.toLowerCase().trim();
+    // Remove leading non-breaking spaces
+    t = t.replace(/^\s+/, '').replace(/\u00a0/g, ' ').trim();
+    for (var key in KNOWN_LOCATIONS) {
+      if (t === key || t === KNOWN_LOCATIONS[key].display.toLowerCase()) return key;
+    }
+    return null;
+  }
+
+  function isMeetText(text) {
+    var lower = text.toLowerCase();
+    // Must contain @ or meet keywords, but not be a group schedule line
+    if (/^(AG1|AG2|AG3|JR|SR|VAR)\s/i.test(text.trim())) return false;
+    return MEET_KEYWORDS.some(function(kw) { return lower.indexOf(kw) !== -1; });
+  }
+
+  function parseGroupTime(text) {
+    // Match patterns like "AG3 6:30 - 8:00 PM" or "AG3 11:00-1:15PM" or "SR 5:00 - 6:30 AM"
+    var t = text.replace(/\u00a0/g, ' ').trim();
+    var match = t.match(/^(AG1|AG2|AG3|JR|SR|VAR)\s+(.*)/i);
+    if (!match) return null;
+    var group = match[1].toUpperCase();
+    var timeStr = match[2].trim();
+    // Remove "Zones" or "Zone" suffix from group display
+    timeStr = timeStr.replace(/^Zones?\s*/i, '');
+    return { group: group, time: timeStr || '' };
+  }
+
+  function parseDateFromCell(text) {
+    // Find M/D pattern at the start
+    var match = text.match(/^(\d{1,2})\/(\d{1,2})/);
+    if (!match) return null;
+    var month = parseInt(match[1], 10);
+    var day = parseInt(match[2], 10);
+    var now = new Date();
+    var year = now.getFullYear();
+    // If we're in late year and month is early, might be next year
+    if (now.getMonth() >= 10 && month <= 2) year++;
+    return new Date(year, month - 1, day);
+  }
+
+  function parseScheduleHTML(html) {
+    var parser = new DOMParser();
+    var doc;
+    try {
+      doc = parser.parseFromString(html, 'text/html');
+    } catch(e) {
+      return [];
+    }
+
+    var days = [];
+    var tables = doc.querySelectorAll('table');
+
+    tables.forEach(function(table) {
+      var rows = table.querySelectorAll('tr');
+      rows.forEach(function(row) {
+        var cells = row.querySelectorAll('td');
+        cells.forEach(function(cell) {
+          // Skip header cells (day-of-week names)
+          var cellText = cell.textContent.trim();
+          if (/^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)$/i.test(cellText)) return;
+          if (!cellText) return;
+
+          // Get the inner HTML and split by <br> tags
+          var innerHTML = cell.innerHTML;
+          // Replace <br> variations with a delimiter
+          var lines = innerHTML.replace(/<br\s*\/?>/gi, '\n').split('\n');
+
+          // Clean up each line: strip HTML tags, decode entities, trim
+          lines = lines.map(function(l) {
+            var tmp = document.createElement('span');
+            tmp.innerHTML = l;
+            return tmp.textContent.replace(/\u00a0/g, ' ').trim();
+          }).filter(function(l) { return l.length > 0; });
+
+          if (lines.length === 0) return;
+
+          // First line should contain the date
+          var date = parseDateFromCell(lines[0]);
+          if (!date) return;
+
+          // Remove the date prefix from first line
+          lines[0] = lines[0].replace(/^\d{1,2}\/\d{1,2}\s*/, '').trim();
+          if (!lines[0]) lines.shift();
+
+          var events = [];
+          var meets = [];
+          var currentLocation = null;
+
+          // Collect meet text from the raw HTML (blue colored spans)
+          // Also detect from line content
+          var meetHTML = innerHTML;
+          // Simple approach: check full cell text for meet indicators
+
+          lines.forEach(function(line) {
+            if (!line) return;
+
+            // Check if it's a location
+            var loc = identifyLocation(line);
+            if (loc) {
+              currentLocation = loc;
+              return;
+            }
+
+            // Check if it's a meet entry
+            if (isMeetText(line)) {
+              // Skip things like "Gym and Swim", "New Date!!"
+              if (/^gym and swim$/i.test(line.trim())) return;
+              if (/^new date/i.test(line.trim())) return;
+              meets.push(line);
+              return;
+            }
+
+            // Check if it's a "No Practice" line
+            if (/no practice/i.test(line)) {
+              events.push({ location: currentLocation || 'unknown', group: 'ALL', time: '', isNoPractice: true, note: line });
+              return;
+            }
+
+            // Skip non-schedule text
+            if (/^gym and swim$/i.test(line.trim())) {
+              // Add note to last event
+              if (events.length > 0) {
+                events[events.length - 1].note = 'Gym and Swim';
+              }
+              return;
+            }
+            if (/^new date/i.test(line.trim())) return;
+            if (/^practice schedule tbd/i.test(line.trim())) {
+              events.push({ location: currentLocation || 'unknown', group: 'ALL', time: 'TBD', isNoPractice: false, note: 'Practice schedule TBD' });
+              return;
+            }
+
+            // Try to parse as group + time
+            var gt = parseGroupTime(line);
+            if (gt) {
+              events.push({
+                location: currentLocation || 'unknown',
+                group: gt.group,
+                time: gt.time,
+                isNoPractice: false,
+                note: ''
+              });
+              return;
+            }
+
+            // Could be a continuation time like "7:45 - 9:30 PM"
+            if (/^\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}\s*(AM|PM)?/i.test(line)) {
+              // Attach to previous event as second session
+              if (events.length > 0) {
+                events[events.length - 1].time += ' & ' + line;
+              }
+              return;
+            }
+          });
+
+          days.push({
+            date: date,
+            events: events,
+            meets: meets
+          });
+        });
+      });
+    });
+
+    // Sort by date
+    days.sort(function(a, b) { return a.date - b.date; });
+
+    // Merge duplicate dates (shouldn't happen but just in case)
+    var merged = [];
+    days.forEach(function(day) {
+      var existing = merged.find(function(d) { return d.date.getTime() === day.date.getTime(); });
+      if (existing) {
+        existing.events = existing.events.concat(day.events);
+        existing.meets = existing.meets.concat(day.meets);
+      } else {
+        merged.push(day);
+      }
+    });
+
+    return merged;
+  }
+
+  // --- Rendering ---
+  function getRelativeDay(date) {
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    var diff = Math.round((target - today) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    if (diff > 0 && diff <= 6) return 'In ' + diff + ' days';
+    return '';
+  }
+
+  function formatDate(date) {
+    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return days[date.getDay()] + ', ' + months[date.getMonth()] + ' ' + date.getDate();
+  }
+
+  function getLocKey(loc) {
+    if (!loc || loc === 'unknown') return 'denunzio';
+    return loc.replace(/\s+/g, '').toLowerCase().replace('benfranklin', 'benfranklin').replace('westwindsorwaterworks', 'waterworks');
+  }
+
+  function mapsUrl(locKey) {
+    var info = KNOWN_LOCATIONS[locKey];
+    if (!info) return '#';
+    return 'https://maps.google.com/?q=' + encodeURIComponent(info.address);
+  }
+
+  function locDisplay(locKey) {
+    var info = KNOWN_LOCATIONS[locKey];
+    return info ? info.display : locKey;
+  }
+
+  function escapeHtml(text) {
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function renderSchedule() {
+    var content = document.getElementById('content');
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var endDate = new Date(today.getTime() + DAYS_TO_SHOW * 86400000);
+
+    // Filter days: from today, up to DAYS_TO_SHOW days
+    var filtered = allDays.filter(function(day) {
+      var d = new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate());
+      return d >= today && d < endDate;
+    });
+
+    var html = '';
+
+    // Cache banner
+    if (usingCache) {
+      var cacheTime = storageGet(STORAGE_KEY_CACHE + '-time');
+      var ago = cacheTime ? timeAgo(parseInt(cacheTime, 10)) : 'unknown time';
+      html += '<div class="cache-banner">' +
+        '<span>Showing cached data from ' + escapeHtml(ago) + '</span>' +
+        '<span class="retry-link" id="retryLink">Retry</span>' +
+        '</div>';
+    }
+
+    if (filtered.length === 0) {
+      html += '<div class="empty-state">' +
+        '<h3>No upcoming schedule found</h3>' +
+        '<p>Check back later or visit the <a href="' + TARGET_URL + '" target="_blank" rel="noopener">PTAC calendar</a> directly.</p>' +
+        '</div>';
+      content.innerHTML = html;
+      return;
+    }
+
+    filtered.forEach(function(day) {
+      var hasMeet = day.meets && day.meets.length > 0;
+      var groupEvents = day.events.filter(function(e) {
+        return e.group === selectedGroup || e.group === 'ALL';
+      });
+
+      html += '<div class="day-card' + (hasMeet ? ' has-meet' : '') + '">';
+      html += '<div class="day-header">';
+      html += '<div class="day-date">' + escapeHtml(formatDate(day.date)) + '</div>';
+      var rel = getRelativeDay(day.date);
+      if (rel) html += '<div class="day-relative">' + escapeHtml(rel) + '</div>';
+      html += '</div>';
+
+      // Meet banners
+      if (hasMeet) {
+        day.meets.forEach(function(m) {
+          html += '<div class="meet-banner"><span class="meet-badge">MEET</span> ' + escapeHtml(m) + '</div>';
+        });
+      }
+
+      if (groupEvents.length === 0) {
+        html += '<div class="no-practice">No ' + escapeHtml(selectedGroup) + ' practice scheduled</div>';
+      } else {
+        // Group events by location
+        var byLocation = {};
+        var locOrder = [];
+        groupEvents.forEach(function(e) {
+          var key = e.location || 'unknown';
+          if (!byLocation[key]) {
+            byLocation[key] = [];
+            locOrder.push(key);
+          }
+          byLocation[key].push(e);
+        });
+
+        locOrder.forEach(function(locKey) {
+          var cssLoc = getLocKey(locKey);
+          html += '<div class="location-section" data-loc="' + cssLoc + '">';
+          html += '<div class="location-name" data-loc="' + cssLoc + '"><span>' + escapeHtml(locDisplay(locKey)) + '</span>';
+          if (locKey !== 'unknown') {
+            html += '<a class="map-link" href="' + mapsUrl(locKey) + '" target="_blank" rel="noopener">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>' +
+              '<circle cx="12" cy="10" r="3"></circle></svg>Map</a>';
+          }
+          html += '</div>';
+
+          byLocation[locKey].forEach(function(e) {
+            if (e.isNoPractice) {
+              html += '<div class="event-row"><span class="event-group" style="color:var(--color-no-practice)">No Practice</span></div>';
+            } else {
+              html += '<div class="event-row">';
+              html += '<span class="event-group">' + escapeHtml(e.group) + '</span>';
+              html += '<span class="event-time">' + escapeHtml(e.time) + '</span>';
+              html += '</div>';
+              if (e.note) {
+                html += '<div class="event-note">' + escapeHtml(e.note) + '</div>';
+              }
+            }
+          });
+
+          html += '</div>';
+        });
+      }
+
+      html += '</div>';
+    });
+
+    content.innerHTML = html;
+
+    // Wire up retry link if present
+    var retryLink = document.getElementById('retryLink');
+    if (retryLink) {
+      retryLink.addEventListener('click', function() { loadSchedule(true); });
+    }
+  }
+
+  function timeAgo(ts) {
+    var diff = Date.now() - ts;
+    var mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    var hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'h ago';
+    return Math.floor(hours / 24) + 'd ago';
+  }
+
+  // --- Loading and error states ---
+  function showLoading() {
+    var content = document.getElementById('content');
+    content.innerHTML = '<div class="loading">' +
+      '<div class="loading-spinner"></div>' +
+      '<div class="loading-text">Loading schedule...</div>' +
+      '<div class="loading-slow" id="loadingSlow">Taking longer than expected...</div>' +
+      '</div>';
+    setTimeout(function() {
+      var el = document.getElementById('loadingSlow');
+      if (el) el.style.display = 'block';
+    }, 8000);
+  }
+
+  function showError(msg) {
+    var content = document.getElementById('content');
+    content.innerHTML = '<div class="error-card">' +
+      '<h3>Unable to load schedule</h3>' +
+      '<p>' + escapeHtml(msg) + '</p>' +
+      '<a href="' + TARGET_URL + '" target="_blank" rel="noopener">View on GoMotion</a><br>' +
+      '<button class="retry-btn" onclick="window.__ptacRetry()">Try Again</button>' +
+      '</div>';
+  }
+
+  // --- Cache ---
+  function saveCache(days) {
+    try {
+      var data = JSON.stringify(days, function(key, val) {
+        if (key === 'date' && val instanceof Date) return val.toISOString();
+        return val;
+      });
+      storageSet(STORAGE_KEY_CACHE, data);
+      storageSet(STORAGE_KEY_CACHE + '-time', String(Date.now()));
+    } catch(e) { /* ignore */ }
+  }
+
+  function loadCache() {
+    try {
+      var raw = storageGet(STORAGE_KEY_CACHE);
+      if (!raw) return null;
+      var days = JSON.parse(raw);
+      days.forEach(function(d) {
+        d.date = new Date(d.date);
+      });
+      return days;
+    } catch(e) { return null; }
+  }
+
+  // --- Main flow ---
+  async function loadSchedule(forceRefresh) {
+    var btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    showLoading();
+    usingCache = false;
+
+    try {
+      var html = await fetchScheduleHTML();
+      var days = parseScheduleHTML(html);
+      if (days.length === 0) throw new Error('No schedule data found in page');
+      allDays = days;
+      saveCache(days);
+      renderSchedule();
+    } catch(e) {
+      // Try cache
+      var cached = loadCache();
+      if (cached && cached.length > 0) {
+        allDays = cached;
+        usingCache = true;
+        renderSchedule();
+      } else {
+        showError(e.message || 'Could not load schedule data');
+      }
+    } finally {
+      btn.classList.remove('spinning');
+    }
+  }
+
+  // Expose retry for the error button
+  window.__ptacRetry = function() { loadSchedule(true); };
+
+  // --- Init ---
+  loadGroup();
+  renderPills();
+  loadSchedule();
+})();
+</script>
+</body>
+</html>
